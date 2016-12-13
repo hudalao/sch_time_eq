@@ -86,72 +86,100 @@ def Hamiltonian_momentum_basis(c, potential, domain, N):
     return H
 
 #Here, in order to comparing the difference of efficiency between sequential and parallel algorithm, we will implement the matrix inversion algorithm by ourselves using Gaussian Elimination
-def matrix_inversion_sequential(L):
+def x_sequential(L, b):
     
     size = L.shape[0]
-    #using Gaussian Elimination to calculate out the inverse matrix of L
-    #in our case, the matrix L must have the inverse matrix becuase it is a symmetric matrix
-    I = np.identity(size)
+    #using Gaussian Elimination to figure out the upper triaugular matrix of L
+    #in our case, the matrix L must have the inverse matrix becuase it is not a singular matrix
+    #make sure the L[ii][ii] != 0
+    #ii refers to column
     for ii in range(size):
-        scale = L[ii,ii]
-        for jj in range(size):
-            L[ii,jj] = L[ii,jj] / scale
-            I[ii,jj] = I[ii,jj] / scale
-        if ii < size - 1:
-            for row in range(ii + 1, size):
-                factor = L[row, ii]
-                for col in range(1, size):
-                    L[row,col]=L[row,col] - factor * L[ii,col]
-                    I[row,col]=I[row,col] - factor * I[ii,col]
+        nonzeroRow = ii
+        run = True
+        if L[ii][ii] != 0:
+            run = False
+        while run == True:
+            nonzeroRow = nonzeroRow + 1
+            if L[nonzeroRow][ii] != 0:
+                run = False
+                
+        #swap these two rows
+        for kk in range(size):
+            tmp = L[nonzeroRow][kk]
+            L[nonzeroRow][kk] = L[ii][kk]
+            L[ii][kk] = tmp
+        #swap b
+        tmp_b = b[nonzeroRow]
+        b[nonzeroRow] = b[ii]
+        b[ii] = tmp_b
+        
+        #make the elements below the L[ii][ii] to be zero
+        for ll in range(ii + 1, size):
+            factor = -L[ll][ii] / L[ii][ii]
+            for mm in range(ii, size):
+                if mm == ii:
+                    L[ll][mm] = 0
+                else:
+                    L[ll][mm] += factor * L[ii][mm]
+            b[ll] += factor * b[ii]
 
-    #back substitution
-    for ref in range(size - 1, 0, -1):
-        for row in range(ref - 1, 0, -1):
-            factor = L[row, ref]
-            for col in range(row - size, size):
-                L[row,col]=L[row,col] - factor * L[ref,col]
-                I[row,col]=I[row,col] - factor * I[ref,col]
+    #for ref in range(size - 1, 0, -1):
+    #    for row in range(ref - 1, 0, -1):
+    #        factor = L[row, ref]
+    #        for col in range(row - size, size):
+    #            L[row,col]=L[row,col] - factor * L[ref,col]
+    #            I[row,col]=I[row,col] - factor * I[ref,col]
+ 
+    #solving Ax=b 
+    x = [0 for i in range(size)]
+    for nn in range(size - 1, -1, -1):
+        x[nn] = b[nn] / L[nn][nn]
+        for pp in range(nn-1, -1, -1):
+            b[pp] -= L[pp][nn] * x[nn]
     
-    return L, I
+    return x
+    
+    
+#using Gaussian Elimination to calculate out the inverse matrix of L
+#in our case, the matrix L must have the inverse matrix becuase it is not a singular matrix
+#make sure at every run, L[ii][ii] != 0
+def rearrange_matrix(ii, size, L, b):
+    maxRow = ii
+    maxVal = abs(L[ii][ii])
+    for jj in range(ii + 1, size):
+        if L[jj][ii] > maxVal:
+            maxVal = L[jj][ii]
+            maxRow = jj
+    #swap these two rows
+    for kk in range(ii, size):
+        tmp = L[maxRow][kk]
+        L[maxRow][kk] = L[ii][kk]
+        L[ii][kk] = tmp
+    #swap b
+    tmp_b = b[maxRow]
+    b[maxRow] = b[ii]
+    b[ii] = tmp_b
+    #make the elements below the L[ii][ii] to be zero
+    for ll in range(ii + 1, size):
+        factor = -L[ll][ii] / L[ii][ii]
+        for mm in range(ii, size):
+            if mm == ii:
+                L[ll][mm] = 0
+            else:
+                L[ll][mm] += factor * L[ii][mm]
+        b[ll] += factor * b[ii]
+    return L, b
+#solving Ax=b
+#this function is hard to be made parallel by pool tool
+def x_solver(nn, L, b):
+    #x = [0 for i in range(size)]
+    #for nn in range(size - 1, -1, -1):
+    x = b[nn] / L[nn][nn]
+    for pp in range(nn - 1, -1, -1):
+        b[pp] -= L[pp][nn] * x
+    return x
+    
 
-def matrix_inversion_parallel(L):
-
-    #using Gaussian Elimination to calculate out the inverse matrix of L
-    #in our case, the matrix L must have the inverse matrix becuase it is a symmetric matrix
-    def matrix_inversion_func(param):
-        size = L.shape[0]
-        I = np.identity(size)
-        scale = L[ii,ii]
-        for jj in range(size):
-            L[ii,jj] = L[ii,jj] / scale
-            I[ii,jj] = I[ii,jj] / scale
-        if ii < size - 1:
-            for row in range(ii + 1, size):
-                factor = L[row, ii]
-                for col in range(1, size):
-                    L[row,col]=L[row,col] - factor * L[ii,col]
-                    I[row,col]=I[row,col] - factor * I[ii,col]
-        return L, I 
-    
-    ii = range(size)
-    pool = mp.Pool()
-    results = pool.map(matrix_inversion_func, ii)
-    
-    
-    #back substitution
-    def back_substitution(results):
-        size = L.shape[0]
-        I = np.identity(size)
-        for row in range(ref - 1, 0, -1):
-            factor = L[row, ref]
-            for col in range(row - size, size):
-                L[row,col]=L[row,col] - factor * L[ref,col]
-                I[row,col]=I[row,col] - factor * I[ref,col]
-        return L, I 
-    
-    ref = range(size - 1, 0, -1)
-    identity, matrix_inverse = pool.map(back_substitution, ref)
-    
 def wave_function_propagation_sequential(H, initial_wave, total_time, time_interval):
     
     t_points = total_time / time_interval + 1
@@ -161,15 +189,49 @@ def wave_function_propagation_sequential(H, initial_wave, total_time, time_inter
     #using Crank-Nicolson methond 
     #assuming Hamiltonian is time-independent in this case
     wave = initial_wave
-    
+
     L = np.identity(size) + 1j * time_interval / 2 * H
     b_coef = np.identity(size) - 1j * time_interval / 2 * H
-    
 
-    for t in range(2:point)
-        b = b_coef * wave
-        wave = L_inverse * b
-    
+    for t in range(1,int(t_points)):
+        b = np.dot(b_coef, wave)
+        wave = x_sequential(L, b)        
+        #wave = np.linalg.solve(L,b)
     return wave
 
-def wave_function_propagation_parallel
+def wave_function_propagation_parallel():
+    
+    t_points = total_time / time_interval + 1
+    
+    size = initial_wave.size
+
+    #using Crank-Nicolson methond 
+    #assuming Hamiltonian is time-independent in this case
+    wave = initial_wave
+    
+    L1 = np.identity(size) + 1j * time_interval / 2 * H
+    size1 = L1.shape[0]
+    x1 = [0 for i in range(size1)]
+    ii1 = range(size1)
+    nn1 = range(size1 - 1, -1, -1)
+    b_coef = np.identity(size) - 1j * time_interval / 2 * H
+
+    for t in range(2,point):
+        b1 = b_coef * wave
+
+        partial_rearrange = partial(rearrange_matrix,size=size1,L=L1,b=b1 )
+        if __name__ == '__main__':
+            pool = mp.Pool()
+            result = pool.map(partial_rearrange, ii1)
+            L2 = result[0][0]
+            b2 = result[0][1]
+            
+            wave = x_solver(L2, b2,size1)
+            
+            #partial_solver = partial(x_solver, x=x1,L=L2,b=b2) 
+            #wave = pool.map(partial_solver, nn1)
+            
+            pool.close() 
+            
+    return wave
+

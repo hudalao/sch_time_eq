@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 import math as mt
 import numpy.polynomial.legendre as legen
 import cmath
-from function import wave_fourier_basis, Hamiltonian_momentum_basis, Legendre_polynomial_basis, reconstruct_wave, \
-                    Hamiltonian_Legendre_polynomial
+from function import wave_fourier_basis, Hamiltonian_momentum_basis, reconstruct_wave
 
 #input includes:
 #c the constant
