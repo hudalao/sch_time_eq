@@ -1,0 +1,6 @@
+[run]
+source = sch_time_eq
+[report]
+include = sch_time_eq/*
+omit = tests/*, setup.py, travis_pypi_setup.py
+show_missing = True

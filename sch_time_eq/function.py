@@ -17,40 +17,9 @@ import multiprocessing as mp
 #N the size of the basis set
 #V the potential energy V(x) ps: the size of V(x) should be same as the size of the basis set
 #V_const the constant potential energy 
-#the choice of basis set function: 1 ---> the fourier basis 2 ---> the legendre polynomial basis
-#ps: the fourier basis can take function V of x, but the legendre polynomial basis  can only take the constant V. Be careful when you use different basis method
 #ps: in this question, we set h_bar to 1
 
 #with input wave function, calculate its coefficient under the fourier basis
-def wave_fourier_basis(wave_func, domain, N):
-    x = np.linspace(-domain / 2, domain / 2, N)
-    n = np.linspace(-N / 2 + 1, N / 2, N)
-    exp_coeff = 1j * 2 * np.pi * n / domain
-    delta_x = domain / (N - 1)
-    a = np.zeros(N, dtype = complex)
-    for ii in range(1, N):
-        for kk in range(N):
-            add = wave_func[kk] * cmath.exp( -1 * exp_coeff[ii] * x[kk] )
-            a[ii] = a[ii] + add
-    a = a / N
-    return a
-
-#reconstruct the original function for testing purpose
-def reconstruct_wave(wave_fourier_coeff, domain, N):
-    x = np.linspace(-domain / 2, domain / 2, N)
-    n = np.linspace(-N / 2 + 1, N / 2, N)
-    exp_coeff = 1j * 2 * np.pi * n / domain
-    delta_p = 2 * np.pi / domain
-    wave = np.zeros(N, dtype = complex)
-    for kk in range(N):
-        for ii in range(N):
-            add = wave_fourier_coeff[ii] * \
-                    cmath.exp( exp_coeff[ii] * x[kk] )
-            wave[kk] = wave[kk] + add
-    
-    wave = wave * delta_p
-    
-    return wave
     
 #here, we use the momentum basis which is a fourier basis set, which means we reprsent the whole (-c Lap + V) as matrix with the momentum basis
 #potential here refers to V in the equation shown above
@@ -170,7 +139,6 @@ def rearrange_matrix(ii, size, L, b):
         b[ll] += factor * b[ii]
     return L, b
 #solving Ax=b
-#this function is hard to be made parallel by pool tool
 def x_solver(nn, L, b):
     #x = [0 for i in range(size)]
     #for nn in range(size - 1, -1, -1):
