@@ -17,6 +17,8 @@ sch_time_eq
      :target: https://pyup.io/repos/github/hudalao/sch_time_eq/
      :alt: Updates
 
+.. image:: https://coveralls.io/repos/github/hudalao/sch_time_eq/badge.svg
+     :target: https://coveralls.io/github/hudalao/sch_time_eq
 
 solving time dependent schrodinger equation
 
