@@ -12,20 +12,54 @@ import sys
 import unittest
 
 import numpy as np
-import matplotlib.pyplot as plt
 import math as mt
-import numpy.polynomial.legendre as legen
 import cmath
 import multiprocessing as mp
+from functools import partial
 
-#from sch_time_eq.sch_time_eq import output, ground_wave_function
-from sch_time_eq.function import wave_fourier_basis, Hamiltonian_momentum_basis, \
-         reconstruct_wave, x_sequential, rearrange_matrix, \
+from sch_time_eq.function import  Hamiltonian_momentum_basis,  x_sequential, rearrange_matrix, \
         x_solver, wave_function_propagation_sequential, wave_function_propagation_parallel 
 
 
 class TestSch_eq(unittest.TestCase):
-    
+    def test_ax_b_implementation(self):
+        #testing if Ax=b solver got the same result as the numpy.solve function
+        L1 = np.array([[1.0,0.,0.,0.],[0.,5.0,0.,0.],[0.,5.0,-1.0,0.],[0.,0.3,0.,7.0]])
+        b1 = np.array([3.0,-3.0,-11.0,-5.0])
+
+        result = x_sequential(L1, b1)
+        ref = np.linalg.solve(L1, b1)
+       
+        result = np.around(result, decimals = 2)
+        ref = np.around(ref, decimals = 2)
+
+        for ii in range(ref.size):
+            self.assertEqual(result[ii], ref[ii])
+
+    def test_ax_b_implementation_parallel(self):
+        L1 = np.array([[1.0,0.0,0.0,0.0],[0.0,5.0,0.0,0.0],[0.0,5.0,-1.0,0.0],[0.0,0.3,0.0,7.0]])
+        b1 = np.array([3.0,-3.0,-11.0,-5.0])
+
+        ref = np.linalg.solve(L1, b1)
+        
+        size1 = L1.shape[0]
+        ii1 = range(size1)
+        partial_rearrange = partial(rearrange_matrix,size=size1,L=L1,b=b1 )
+        if __name__ == '__main__':
+            pool = mp.Pool()
+            result = pool.map(partial_rearrange, ii1)
+            L2 = result[0][0]
+            b2 = result[0][1]
+            partial_solver = partial(x_solver, L=L2,b=b2)
+            nn1 = range(size1 - 1, -1, -1)
+            x = pool.map(partial_solver, nn1)
+            pool.close()
+            x_rev = x[::-1]
+            x_rev = np.around(x_rev, decimals = 2)
+            ref = np.around(ref, decimals = 2)
+            for ii in range(ref.size):
+                self.assertEqual(x_rev[ii], ref[ii])
+
     def test_harmonic_oscillator(self):
         #the ODE describing the harmonic oscillator has the same for as our ODE,becaue we know the eigenvalues(energy) of the harmonic oscillator is E = h_bar * frequence * (N + 1/2), where N is the occupation number of phonons, the values of N is from 0 to infinity
         

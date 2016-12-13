@@ -195,8 +195,8 @@ def wave_function_propagation_sequential(H, initial_wave, total_time, time_inter
 
     for t in range(1,int(t_points)):
         b = np.dot(b_coef, wave)
-        wave = x_sequential(L, b)        
-        #wave = np.linalg.solve(L,b)
+        #wave = x_sequential(L, b)        
+        wave = np.linalg.solve(L,b)
     return wave
 
 def wave_function_propagation_parallel():
@@ -226,10 +226,9 @@ def wave_function_propagation_parallel():
             L2 = result[0][0]
             b2 = result[0][1]
             
-            wave = x_solver(L2, b2,size1)
             
-            #partial_solver = partial(x_solver, x=x1,L=L2,b=b2) 
-            #wave = pool.map(partial_solver, nn1)
+            partial_solver = partial(x_solver, x=x1,L=L2,b=b2) 
+            wave = pool.map(partial_solver, nn1)
             
             pool.close() 
             
